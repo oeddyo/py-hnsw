@@ -1,15 +1,16 @@
 from typing import List, Tuple
 
+from common.base_index import BaseIndex
 from common.vector import Vector
 from common.distance import euclidean
 
 
-class BruteForce:
+class BruteForce(BaseIndex):
     def __init__(self, dim: int):
         self.dim = dim
         self.index = {}
 
-    def add(self, doc_id: str, v: Vector) -> None:
+    def add_item(self, doc_id: str, v: Vector) -> None:
         assert len(v) == self.dim, "Added doc has different dimension than the dim of index"
         self.index[doc_id] = v
 
