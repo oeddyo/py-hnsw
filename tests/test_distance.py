@@ -1,5 +1,5 @@
 from unittest import TestCase
-from hnsw.distance import euclidean
+from common.distance import euclidean
 
 
 class DistanceTest(TestCase):

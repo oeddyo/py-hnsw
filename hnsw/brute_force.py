@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from hnsw.vector import Vector
-from hnsw.distance import euclidean
+from common.vector import Vector
+from common.distance import euclidean
 
 
 class BruteForce:

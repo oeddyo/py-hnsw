@@ -1,5 +1,5 @@
 import math
-from .vector import Vector
+from common.vector import Vector
 
 
 def euclidean(a: Vector, b: Vector) -> float:
