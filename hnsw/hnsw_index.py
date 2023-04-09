@@ -13,7 +13,7 @@ class HNSWIndex(BaseIndex):
         Create HNSW index
 
         :param dim: dimension of the index.
-        :param m: parameter used by HNSW
+        :param m: parameter used by HNSW. A reasonable range of M is from 5 to 48 according to the paper
         """
         self.dim = dim
 
