@@ -1,5 +1,5 @@
 from unittest import TestCase
-from hnsw.brute_force import BruteForce
+from brute_force.brute_force import BruteForce
 
 
 class Test(TestCase):
