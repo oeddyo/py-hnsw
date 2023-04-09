@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from hnsw.myvector import Vector
+from hnsw.vector import Vector
 from hnsw.distance import euclidean
 
 
