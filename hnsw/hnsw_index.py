@@ -21,7 +21,7 @@ class HNSWIndex(BaseIndex):
         self.entry_point = None
 
         # multiplier corresponds to the "multi_" term used in hnswlib
-        # it's a multiplier derived from the parameter m and it won't change later on
+        # it's a multiplier derived from the parameter m, and once initialized it won't change later on
         self.multiplier = 1 / math.log(m)
 
     def add_item(self, doc_id: str, v: Vector):
