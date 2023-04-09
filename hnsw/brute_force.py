@@ -19,7 +19,7 @@ class BruteForce:
             d = euclidean(v, q)
             distances.append((d, k))
 
-        # now sort and take top-k
+        # now sort and take k-smallest distance vectors
         sorted_docs = sorted(distances)[:k]
 
         results = []
