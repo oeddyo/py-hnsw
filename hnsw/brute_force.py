@@ -13,11 +13,11 @@ class BruteForce:
         assert len(v) == self.dim, "Added doc has different dimension than the dim of index"
         self.index[doc_id] = v
 
-    def knn(self, k: int, q: Vector) -> List[Tuple[str, float]]:
+    def knn(self, k: int, query_vector: Vector) -> List[Tuple[str, float]]:
         distances = []
-        for k, v in self.index.items():
-            d = euclidean(v, q)
-            distances.append((d, k))
+        for doc_id, doc_vector in self.index.items():
+            distance = euclidean(doc_vector, query_vector)
+            distances.append((distance, doc_id))
 
         # now sort and take k-smallest distance vectors
         sorted_docs = sorted(distances)[:k]
