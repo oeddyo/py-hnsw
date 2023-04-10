@@ -10,7 +10,7 @@ from common.vector import Vector
 
 import math
 
-StringOpt = typing.Union[str, None]
+EnterPoint = typing.Union[None, Tuple[str, int]]
 
 
 class HNSWIndex(BaseIndex):
@@ -30,7 +30,7 @@ class HNSWIndex(BaseIndex):
         self.max_m_0 = self.m * 2
 
         # line2: ep in the paper
-        self.entry_point_id: StringOpt = None
+        self.entry_point: EnterPoint = None
 
         # multiplier corresponds to the "multi_" term used in hnswlib
         # it's a multiplier derived from the parameter m, and once initialized it won't change later on
@@ -97,11 +97,11 @@ class HNSWIndex(BaseIndex):
         self.vector_dict[doc_id] = v
 
         # get entry point
-        ep = self.entry_point_id
         assigned_initial_level = get_random_level(self.multiplier)
 
         # if it's adding the first point in index, do nothing
-        if self.entry_point_id is not None:
+        if self.entry_point is not None:
+            ep, ep_level = self.entry_point
             for level in range(self.max_level, assigned_initial_level, -1):
                 # move enter point from top level to the next
                 ep = self._search_layer(v, ep, 1, level)[0]
@@ -131,10 +131,14 @@ class HNSWIndex(BaseIndex):
 
                 ep = close_neighbours[0]
 
+            if assigned_initial_level > ep_level:
+                self.entry_point = (doc_id, assigned_initial_level)
+        else:
+            self.entry_point = (doc_id, assigned_initial_level)
+
         # update max level and enter point when the current level is larger than max level
         if assigned_initial_level > self.max_level:
             self.max_level = assigned_initial_level
-            self.entry_point_id = doc_id
             if len(self.level_graphs) < self.max_level + 1:
                 for i in range(self.max_level + 1 - len(self.level_graphs)):
                     self.level_graphs.append(defaultdict(list))
