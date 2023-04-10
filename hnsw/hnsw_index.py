@@ -14,7 +14,7 @@ StringOpt = typing.Union[str, None]
 
 class HNSWIndex(BaseIndex):
 
-    def __init__(self, dim: int = 64, m: int = 16):
+    def __init__(self, dim: int = 64, m: int = 16, ef_construction: int = 100):
         """
         Create HNSW index
 
@@ -22,6 +22,8 @@ class HNSWIndex(BaseIndex):
         :param m: parameter used by HNSW. A reasonable range of M is from 5 to 48 according to the paper
         """
         self.dim = dim
+        self.m = m
+        self.ef_construction = ef_construction
 
         # line2: ep in the paper
         self.entry_point_id: StringOpt = None
@@ -38,7 +40,7 @@ class HNSWIndex(BaseIndex):
     def _get_neighbourhood(self, cur: int, level: int) -> List[str]:
         return self.level_graphs[level][cur]
 
-    def _search_layer(self, q: Vector, enter_point: str, ef: int, level: int) -> List[str]:
+    def _search_layer(self, q: Vector, enter_point: str, ef: int, level: int) -> List[Tuple[float, str]]:
         """
         Search on a specific level and return closest ef candidates. The search starts from enter_point
 
@@ -68,37 +70,34 @@ class HNSWIndex(BaseIndex):
                     distance = euclidean(self.vector_dict[neighbour], q)
                     candidates.put((distance, neighbour))
 
-                    if len(results) < ef:
-                        results.append((distance, neighbour))
+                    results.append((distance, neighbour))
 
-        return [doc_id for (dis, doc_id) in sorted(results)[:ef]]
+        return sorted(results)[:ef]
 
     def add_item(self, doc_id: str, v: Vector):
         # get entry point
         ep = self.entry_point_id
-        current_level = get_random_level(self.multiplier)
+        assigned_initial_level = get_random_level(self.multiplier)
 
         # if it's adding the first point in index, do nothing
         if self.entry_point_id is not None:
+            for level in range(self.max_level, assigned_initial_level, -1):
+                # move enter point from top level to the next
+                _, ep = self._search_layer(v, ep, 1, level)[0]
 
-            # get the entry point in the vector space
-            # we call it cur_point. It means the current position of our exploration on the graph
-            cur_point = self.vector_dict[self.entry_point_id]
+            for level in range(min(assigned_initial_level, self.max_level), -1, -1):
+                neighbour_with_distances = sorted(self._search_layer(v, ep, self.ef_construction, level))
 
-            # get the distance of the inserted vector v to the "cur_point"
-            distance_to_v = euclidean(v, cur_point)
-            for level in range(self.max_level, current_level, -1):
-                changed = True
-                while changed:
-                    changed = False
-
-                    # from the cur_point, we find all the
-
-            pass
+                # get the first m neighbour and create edges on level
+                for dis, node in neighbour_with_distances[:self.m]:
+                    # create bi-directional edge on level
+                    self.level_graphs[level][node].append(doc_id)
+                    self.level_graphs[level][doc_id].append(node)
+                ep = neighbour_with_distances[0][1]
 
         # update max level and enter point when the current level is larger than max level
-        if current_level > self.max_level:
-            self.max_level = current_level
+        if assigned_initial_level > self.max_level:
+            self.max_level = assigned_initial_level
             self.entry_point_id = doc_id
 
     def knn(self, k: int, query_vector: Vector) -> List[Tuple[str, float]]:
