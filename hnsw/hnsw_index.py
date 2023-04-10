@@ -56,11 +56,13 @@ class HNSWIndex(BaseIndex):
         """
         # pq is a min heap
         pq = PriorityQueue()
-        pq.put((euclidean(q, self.vector_dict[enter_point]), enter_point))
+        initial_distance = euclidean(q, self.vector_dict[enter_point])
+        pq.put((initial_distance, enter_point))
         visited = set()
 
         # results is a max heap
         results = PriorityQueue()
+        results.put((-initial_distance, enter_point))
 
         while pq.qsize() > 0:
             cur_dis, cur = pq.get()
