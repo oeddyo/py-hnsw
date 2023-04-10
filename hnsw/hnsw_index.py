@@ -102,32 +102,32 @@ class HNSWIndex(BaseIndex):
         if self.entry_point_id is not None:
             for level in range(self.max_level, assigned_initial_level, -1):
                 # move enter point from top level to the next
-                _, ep = self._search_layer(v, ep, 1, level)[0]
+                ep = self._search_layer(v, ep, 1, level)[0]
 
             for level in range(min(assigned_initial_level, self.max_level), -1, -1):
-                neighbour_with_distances = \
-                    sorted(self._search_layer(v, ep, self.ef_construction, level))[:self.m]
+                close_neighbours = self._search_layer(v, ep, self.ef_construction, level)
 
                 # get the first m neighbour and create edges on level
-                for dis, node in neighbour_with_distances:
+                for adj_node in close_neighbours:
                     # create bi-directional edge on level
-                    self.level_graphs[level][node].append((doc_id, dis))
-                    self.level_graphs[level][doc_id].append((node, dis))
+                    self.level_graphs[level][adj_node].append(doc_id)
+                    self.level_graphs[level][doc_id].append(adj_node)
 
-                for _, e in neighbour_with_distances:
+                for e in close_neighbours:
                     e_conn = self._get_neighbourhood(e, level)
                     m_max = self.max_m_0 if level == 0 else self.m
 
                     if len(e_conn) > m_max:
                         # from e_conn pick m closest nodes
+                        d_array: List[Tuple[str, float]] = []
+                        for adj_e in e_conn:
+                            d = euclidean(self.vector_dict[e], self.vector_dict[adj_e])
+                            d_array.append((adj_e, d))
+                        d_array = sorted(d_array)[:m_max]
+                        e_new_conn = [x[0] for x in d_array]
+                        self.level_graphs[level][e] = e_new_conn
 
-
-
-                        pass
-
-                # potentially shrink connections
-
-                ep = neighbour_with_distances[0][1]
+                ep = close_neighbours[0]
 
         # update max level and enter point when the current level is larger than max level
         if assigned_initial_level > self.max_level:
