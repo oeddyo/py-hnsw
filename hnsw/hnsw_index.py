@@ -25,6 +25,9 @@ class HNSWIndex(BaseIndex):
         self.m = m
         self.ef_construction = ef_construction
 
+        # the maximum number of connections an element can have in the zero layer
+        self.max_m_0 = self.m * 2
+
         # line2: ep in the paper
         self.entry_point_id: StringOpt = None
 
@@ -86,13 +89,26 @@ class HNSWIndex(BaseIndex):
                 _, ep = self._search_layer(v, ep, 1, level)[0]
 
             for level in range(min(assigned_initial_level, self.max_level), -1, -1):
-                neighbour_with_distances = sorted(self._search_layer(v, ep, self.ef_construction, level))
+                neighbour_with_distances = \
+                    sorted(self._search_layer(v, ep, self.ef_construction, level))[:self.m]
 
                 # get the first m neighbour and create edges on level
-                for dis, node in neighbour_with_distances[:self.m]:
+                for dis, node in neighbour_with_distances:
                     # create bi-directional edge on level
                     self.level_graphs[level][node].append(doc_id)
                     self.level_graphs[level][doc_id].append(node)
+
+                for _, node in neighbour_with_distances:
+                    e_conn = self._get_neighbourhood(node, level)
+                    m_max = self.max_m_0 if level == 0 else self.m
+
+                    if len(e_conn) > m_max:
+                        # from e_conn pick m closest nodes
+                        
+                        pass
+
+                # potentially shrink connections
+
                 ep = neighbour_with_distances[0][1]
 
         # update max level and enter point when the current level is larger than max level
