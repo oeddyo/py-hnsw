@@ -66,6 +66,7 @@ class HNSWIndex(BaseIndex):
                     visited.add(neighbour)
 
                     distance = euclidean(self.vector_dict[neighbour], q)
+                    candidates.put((distance, neighbour))
 
                     if len(results) < ef:
                         results.append((distance, neighbour))
