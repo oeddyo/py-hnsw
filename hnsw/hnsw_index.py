@@ -40,7 +40,7 @@ class HNSWIndex(BaseIndex):
         # key is level, value is the adjacent list on that level
         self.level_graphs = {}
 
-    def _get_neighbourhood(self, cur: int, level: int) -> List[str]:
+    def _get_neighbourhood(self, cur: str, level: int) -> List[str]:
         return self.level_graphs[level][cur]
 
     def _search_layer(self, q: Vector, enter_point: str, ef: int, level: int) -> List[Tuple[float, str]]:
@@ -104,7 +104,7 @@ class HNSWIndex(BaseIndex):
 
                     if len(e_conn) > m_max:
                         # from e_conn pick m closest nodes
-                        
+
                         pass
 
                 # potentially shrink connections
