@@ -1,4 +1,5 @@
 import typing
+from collections import defaultdict
 from queue import PriorityQueue
 from typing import List, Tuple
 
@@ -38,12 +39,13 @@ class HNSWIndex(BaseIndex):
         self.vector_dict = {}
 
         # key is level, value is the adjacent list on that level
-        self.level_graphs = {}
+        # format is {[from_node]:
+        self.level_graphs = []
 
     def _get_neighbourhood(self, cur: str, level: int) -> List[str]:
         return self.level_graphs[level][cur]
 
-    def _search_layer(self, q: Vector, enter_point: str, ef: int, level: int) -> List[Tuple[float, str]]:
+    def _search_layer(self, q: Vector, enter_point: str, ef: int, level: int) -> List[str]:
         """
         Search on a specific level and return closest ef candidates. The search starts from enter_point
 
@@ -52,32 +54,46 @@ class HNSWIndex(BaseIndex):
         :param ef: how many to return
         :param level: level on the hierarchy graph
         """
+        # pq is a min heap
+        pq = PriorityQueue()
+        pq.put((euclidean(q, self.vector_dict[enter_point]), enter_point))
         visited = set()
-        visited.add(enter_point)
 
-        cur_point_vector = self.vector_dict[enter_point]
-        q_to_enter_point = euclidean(q, cur_point_vector)
+        # results is a max heap
+        results = PriorityQueue()
 
-        candidates = PriorityQueue()
-        candidates.put((q_to_enter_point, enter_point))
+        while pq.qsize() > 0:
+            cur_dis, cur = pq.get()
+            if cur in visited:
+                continue
+            visited.add(cur)
 
-        results = []
+            largest = -results.queue[0][0] if results.qsize() > 0 else 0
+            if cur_dis > largest and results.qsize() >= ef:
+                break
 
-        while candidates.qsize() > 0:
-            closest_dis, closest_point = candidates.get()
+            for adj_node in self._get_neighbourhood(cur, level):
+                if adj_node not in visited:
+                    distance = euclidean(self.vector_dict[adj_node], q)
+                    if results.qsize() < ef:
+                        results.put((-distance, adj_node))
+                        pq.put((distance, adj_node))
+                    else:
+                        results.get()
+                        pq.put((distance, adj_node))
 
-            for neighbour in self._get_neighbourhood(closest_point, level):
-                if neighbour not in visited:
-                    visited.add(neighbour)
+        to_return = []
+        for i in range(min(ef, results.qsize())):
+            _, cur = results.get()
+            to_return.append(cur)
 
-                    distance = euclidean(self.vector_dict[neighbour], q)
-                    candidates.put((distance, neighbour))
-
-                    results.append((distance, neighbour))
-
-        return sorted(results)[:ef]
+        return to_return
 
     def add_item(self, doc_id: str, v: Vector):
+
+        # add the vector to dic immediately so following code can access the item in dic
+        self.vector_dict[doc_id] = v
+
         # get entry point
         ep = self.entry_point_id
         assigned_initial_level = get_random_level(self.multiplier)
@@ -95,15 +111,17 @@ class HNSWIndex(BaseIndex):
                 # get the first m neighbour and create edges on level
                 for dis, node in neighbour_with_distances:
                     # create bi-directional edge on level
-                    self.level_graphs[level][node].append(doc_id)
-                    self.level_graphs[level][doc_id].append(node)
+                    self.level_graphs[level][node].append((doc_id, dis))
+                    self.level_graphs[level][doc_id].append((node, dis))
 
-                for _, node in neighbour_with_distances:
-                    e_conn = self._get_neighbourhood(node, level)
+                for _, e in neighbour_with_distances:
+                    e_conn = self._get_neighbourhood(e, level)
                     m_max = self.max_m_0 if level == 0 else self.m
 
                     if len(e_conn) > m_max:
                         # from e_conn pick m closest nodes
+
+
 
                         pass
 
@@ -115,6 +133,9 @@ class HNSWIndex(BaseIndex):
         if assigned_initial_level > self.max_level:
             self.max_level = assigned_initial_level
             self.entry_point_id = doc_id
+            if len(self.level_graphs) < self.max_level + 1:
+                for i in range(self.max_level + 1 - len(self.level_graphs)):
+                    self.level_graphs.append(defaultdict(list))
 
     def knn(self, k: int, query_vector: Vector) -> List[Tuple[str, float]]:
         return []
