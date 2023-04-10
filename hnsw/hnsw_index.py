@@ -32,8 +32,11 @@ class HNSWIndex(BaseIndex):
         self.max_level = -1
         self.vector_dict = {}
 
+        # key is level, value is the adjacent list on that level
+        self.level_graphs = {}
+
     def _get_neighbourhood(self, cur: int, level: int) -> List[str]:
-        return []
+        return self.level_graphs[level][cur]
 
     def _search_layer(self, q: Vector, enter_point: str, ef: int, level: int) -> List[str]:
         """
@@ -65,9 +68,9 @@ class HNSWIndex(BaseIndex):
                     distance = euclidean(self.vector_dict[neighbour], q)
 
                     if len(results) < ef:
-                        results.append(neighbour)
+                        results.append((distance, neighbour))
 
-        return results[:ef]
+        return [doc_id for (dis, doc_id) in sorted(results)[:ef]]
 
     def add_item(self, doc_id: str, v: Vector):
         # get entry point
